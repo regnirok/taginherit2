@@ -1,0 +1,35 @@
+### PARAMETERS
+
+param ( 
+    [Parameter(Mandatory=$true)][string]$ResourceGroupName,      
+    [Parameter(Mandatory=$true)][string]$TagBusinessUnit,
+    [Parameter(Mandatory=$true)][string]$TagCostCenter,
+    [Parameter(Mandatory=$true)][string]$TagRequestor,
+    [Parameter(Mandatory=$true)][string]$TagUsedFor,
+    [Parameter(Mandatory=$true)][string]$SupportGroup
+) 
+
+### AUTHENTICATE 
+
+#Call Automation RunAs account to connect to subscription
+$Conn = Get-AutomationConnection -Name AzureRunAsConnection
+Add-AzureRMAccount -ServicePrincipal -Tenant $Conn.TenantID `
+-ApplicationId $Conn.ApplicationID -CertificateThumbprint $Conn.CertificateThumbprint
+
+### SCRIPT
+
+$azureRGInfo = Get-AzureRmResourceGroup -Name $resourceGroupName 
+ 
+Set-AzureRmResourceGroup -Id $azureRGInfo.ResourceId -Tag @{ Business_Unit="$TagBusinessUnit"; Cost_Center="$TagCostCenter"; Requestor="$TagRequestor"; Used_For="$TagUsedFor"; Support_Group="$SupportGroup"   }  
+ 
+Write-Host "Adding Tags to Resource Group and waiting 15 seconds to complete" -Foregroundcolor magenta 
+Start-Sleep -Seconds 15 
+ 
+$azureRGInfo = Get-AzureRmResourceGroup -Name $resourceGroupName
+foreach ($item in $azureRGInfo)  
+ 
+{ 
+ 
+Find-AzureRmResource -ResourceGroupNameEquals $item.ResourceGroupName | ForEach-Object {Set-AzureRmResource -ResourceId $PSItem.ResourceId -Tag $item.Tags -Force }  
+ 
+}  
